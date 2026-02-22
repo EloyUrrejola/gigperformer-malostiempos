@@ -6,16 +6,55 @@ var AudioFilePlayer: PluginBlock
 var MidiFilePlayer: PluginBlock
 var OmnisphereInstrument: PluginBlock
 var /*BassGuitarMixer,*/ /*AudioPlayerMixer,*/ MTuner: PluginBlock
+
+var output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6, use_pedal_as_volume: widget
+var output_volume_array: widget array = [output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6]
+
+// --- CHORD BUTTONS ---
+var number_of_track_buttons: integer = 4;
+var button_A, button_B, button_C, button_D: widget
+var button_letter_array: widget array = [button_A, button_B, button_C, button_D]
 var cycle_1, cycle_2, cycle_3, cycle_4: widget
 var cycle_array: widget array = [cycle_1, cycle_2, cycle_3, cycle_4]
 var chord_root_1, chord_root_2, chord_root_3, chord_root_4: widget
 var chord_root_array: widget array = [chord_root_1, chord_root_2, chord_root_3, chord_root_4]
 
-var output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6, use_pedal_as_volume: widget
-var output_volume_array: widget array = [output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6]
+var chord_name_1, chord_name_2, chord_name_3, chord_name_4: widget
+var chord_name_array: widget array = [chord_name_1, chord_name_2, chord_name_3, chord_name_4]
+var next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4: widget
+var next_chord_name_array: widget array = [next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4]
 
-var button_A, button_B, button_C, button_D: widget
-var button_letter_array: widget array = [button_A, button_B, button_C, button_D]
+var fade_out_1, fade_out_2, fade_out_3, fade_out_4: widget
+var fade_out_array: widget array = [fade_out_1, fade_out_2, fade_out_3, fade_out_4]
+
+var button_A_group: widget array = [button_A, chord_name_1, next_chord_name_1, chord_root_1, fade_out_1, cycle_1]
+var button_B_group: widget array = [button_B, chord_name_2, next_chord_name_2, chord_root_2, fade_out_2, cycle_2]
+var button_C_group: widget array = [button_C, chord_name_3, next_chord_name_3, chord_root_3, fade_out_3, cycle_3]
+var button_D_group: widget array = [button_D, chord_name_4, next_chord_name_4, chord_root_4, fade_out_4, cycle_4]
+
+var letters: string array = ["A", "B", "C", "D"]
+// --- CHORD BUTTONS end ---
+
+// --- PADS ---
+var number_of_pad_buttons: integer = 4
+var pad_1, pad_2, pad_3, pad_4: widget
+var chord_root_pad_1, chord_root_pad_2, chord_root_pad_3, chord_root_pad_4: widget
+var fade_out_pad_1, fade_out_pad_2, fade_out_pad_3, fade_out_pad_4: widget
+var cycle_pad_1, cycle_pad_2, cycle_pad_3, cycle_pad_4: widget
+var chord_name_pad_1, chord_name_pad_2, chord_name_pad_3, chord_name_pad_4: widget
+var state_sender_pad_1, state_sender_pad_2, state_sender_pad_3, state_sender_pad_4: widget
+var sender_pad_1, sender_pad_2, sender_pad_3, sender_pad_4: widget
+
+var pad_array: widget array = [pad_1, pad_2, pad_3, pad_4]
+var chord_root_pad_array: widget array = [chord_root_pad_1, chord_root_pad_2, chord_root_pad_3, chord_root_pad_4]
+var fade_out_pad_array: widget array = [fade_out_pad_1, fade_out_pad_2, fade_out_pad_3, fade_out_pad_4]
+var cycle_pad_array: widget array = [cycle_pad_1, cycle_pad_2, cycle_pad_3, cycle_pad_4]
+var chord_name_pad_array: widget array = [chord_name_pad_1, chord_name_pad_2, chord_name_pad_3, chord_name_pad_4]
+var state_sender_pad_array: widget array = [state_sender_pad_1, state_sender_pad_2, state_sender_pad_3, state_sender_pad_4]
+var sender_pad_array: widget array = [sender_pad_1, sender_pad_2, sender_pad_3, sender_pad_4]
+
+var pad_pressed: boolean = true;
+// --- PADS end ---
 
 var tuner_button, bass_button, octave_button, guitar_button, /*octave_amount,*/ metronome_button: widget
 
@@ -31,7 +70,7 @@ var select_bass, bass_name: widget
 var bass_name_array: string array = ["Warwick", "Status"]
 
 var midi_file, midi_player_track, midi_player_volume, midi_file_player_label, midi_file_playing, midi_file_stop_chords, midi_file_stop_chords_label: widget
-var reset_button, stop_button: widget
+var reset_button, pad_reset, stop_button: widget
 var send_setlist: widget
 
 //var /*guitar_delay_button, *//*guitar_amp_button,*/ guitar_reverb_button, guitar_delay_time, guitar_delay_feedback: widget*/
@@ -42,19 +81,8 @@ var guitar_with_midi: widget
 var foot_pedal, foot_pedal_switch, foot_pedal_filter: widget
 var auto_move, auto_fade_in: widget
 
-var chord_name_1, chord_name_2, chord_name_3, chord_name_4: widget
-var chord_name_array: widget array = [chord_name_1, chord_name_2, chord_name_3, chord_name_4]
-var next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4: widget
-var next_chord_name_array: widget array = [next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4]
-
 var start_fade_out, audio_volume_auto: widget
-var fade_out_1, fade_out_2, fade_out_3, fade_out_4: widget
-var fade_out_array: widget array = [fade_out_1, fade_out_2, fade_out_3, fade_out_4]
 
-var button_A_group: widget array = [button_A, chord_name_1, next_chord_name_1, chord_root_1, fade_out_1, cycle_1]
-var button_B_group: widget array = [button_B, chord_name_2, next_chord_name_2, chord_root_2, fade_out_2, cycle_2]
-var button_C_group: widget array = [button_C, chord_name_3, next_chord_name_3, chord_root_3, fade_out_3, cycle_3]
-var button_D_group: widget array = [button_D, chord_name_4, next_chord_name_4, chord_root_4, fade_out_4, cycle_4]
 var current_group: widget array
 var midi_file_player_group: widget array = [midi_player_track, midi_player_volume, midi_file_player_label, midi_file_stop_chords, midi_file_stop_chords_label]
 
@@ -76,18 +104,17 @@ var knob_widget_range_array: integer array = [10, 10]
 var knob_widget_label_before: boolean array = [true, true]
 var knob_widget_start_by_zero_array: boolean array = [false, false]
 
-var number_of_tracks : Integer
+var number_of_tracks, number_of_pads : Integer
 var song_name : String
-var midi_sequence : MidiSequence
-var last_track_number : Integer = -1
-var last_chord : MidiMessage array = []
-var current_chord_number: integer = 0
+var midi_sequence, pad_midi_sequence : MidiSequence
+var last_track_number, last_pad_number : Integer = -1
+var last_chord, last_pad_chord : MidiMessage array = []
+var current_chord_number, current_pad_chord_number: integer = 0
 var last_variation : string = "-1"
 var current_variation, current_setlist : string
 var bass_reverb_saved: Boolean = false
 var filter_off_value: double = 0.6
 var filter_on_value: double = 0.0
-var letters: string array = ["A", "B", "C", "D"]
 var chord_player_triggered: integer = -1
 
 var start_time: double
@@ -95,33 +122,20 @@ var delayed_widgets: widget array
 var variation_time: double
 var events_allowed: boolean
 
-var current_chord: MidiMessage array
-var track_notes: MidiMessage array
-var chord_positions: integer array
-var chord_lengths: integer array
-var chord_names: string array
+var current_chord, current_pad_chord: MidiMessage array
+var track_notes, pad_notes: MidiMessage array
+var chord_positions, pad_chord_positions: integer array
+var chord_lengths, pad_chord_lengths: integer array
+var chord_names, pad_chord_names: string array
 var current_letter_index: integer
 
 var current_midi_page_array: integer array = [200, 200]
-
-// chord panel
-var panel_chord_1, panel_chord_2, panel_chord_3, panel_chord_4, panel_chord_5, panel_chord_6, panel_chord_7, panel_chord_8, panel_chord_9, panel_chord_10, panel_chord_11, panel_chord_12, panel_chord_13, panel_chord_14, panel_chord_15, panel_chord_16: widget
-var panel_chord_array: widget array = [panel_chord_1, panel_chord_2, panel_chord_3, panel_chord_4, panel_chord_5, panel_chord_6, panel_chord_7, panel_chord_8, panel_chord_9, panel_chord_10, panel_chord_11, panel_chord_12, panel_chord_13, panel_chord_14, panel_chord_15, panel_chord_16]
-var panel_chord_row_1, panel_chord_row_2: widget;
-var panel_chord_row_array: widget array = [panel_chord_row_1, panel_chord_row_2]
-var panel_chord_on_value: double = 1.0
-var panel_chord_off_value: double = 0.5
-var panel_chord_empty_value: double = 0.0
-var panel_chord_row_on_value: double = 0.6
-var panel_chord_row_off_value: double = 0.0
-var panel_chord_shift: integer
-var panel_chord_columns: integer = 8
 
 var letter_array: string array
 var pedal_margin_range: integer = 4
 var general_midi_volume: double = 0.707;
 
-var press_track_button: boolean = true;
+var track_button_pressed: boolean = true;
 
 Include "GetChordName"          // getChordName(chord: MidiMessage array)
 Include "LoadMidiFile"          // loadMidiFile(song_name: String)
@@ -147,6 +161,19 @@ function showOrHideMidiFilePlayer()
     end
 end
 
+function setGroupState(widget_group: widget array, active: boolean)
+    showOrHideWidgetGroup(widget_group, !active)
+end
+
+function setPadState(pad_index: integer, active: boolean)
+    var state: integer = 0
+
+    if active then
+        state = 1
+    end
+    SetWidgetValue(state_sender_pad_array[pad_index], state)
+end
+
 function setEfxOrChd(is_efx: boolean)
     if is_efx then
         SetWidgetValue(effect_state, 1)
@@ -155,58 +182,16 @@ function setEfxOrChd(is_efx: boolean)
     end
 end
 
-/*function setChordLetterValues(number_of_tracks: integer)
-    var x: integer
-    var hide_button: boolean
-    
-    for x=0; x<4; x=x+1 do
-        hide_button = true
-        if x < number_of_tracks then
-            hide_button = false
-        end
-        if x == 0 then
-            showOrHideWidgetGroup(button_A_group, hide_button)
-        end
-        if x == 1 then
-            showOrHideWidgetGroup(button_B_group, hide_button)
-            setEfxOrChd(hide_button)
-        end
-        if x == 2 then
-            showOrHideWidgetGroup(button_C_group, hide_button)
-        end
-        if x == 3 then
-            showOrHideWidgetGroup(button_D_group, hide_button)
-        end
-    end
-    showOrHideMidiFilePlayer()
-end*/
-
-function setChordLetterValues(ms: MidiSequence, number_of_tracks: integer)
+function hasChords(group_index: integer, number_of_groups: integer, sequence: MidiSequence) returns boolean
     var chord_events: MidiMessage Array = []
-    var track: integer
-    var has_chord: boolean
-    var end_of_file: boolean
-    var efx_chord_flag: boolean = true
+    var has_chord: boolean = false
+    var end_of_file: boolean = false
 
-    for track = 0; track < number_of_tracks; track = track + 1 do
-        MidiSequence_ResetToStart(ms)
-
-        if track == 0 then
-            current_group = button_A_group
-        elsif track == 1 then
-            current_group = button_B_group
-        elsif track == 2 then
-            current_group = button_C_group
-        elsif track == 3 then
-            current_group = button_D_group
-        end
-
-        has_chord = false
-        end_of_file = false
-
+    MidiSequence_ResetToStart(sequence)
+    if group_index < number_of_groups then
         while !end_of_file and !has_chord do
-            MidiSequence_CollectEventsNow(ms)
-            chord_events = MidiSequence_GetCurrentEvents(ms, track)
+            MidiSequence_CollectEventsNow(sequence)
+            chord_events = MidiSequence_GetCurrentEvents(sequence, group_index)
 
             if Size(chord_events) > 0 then
                 if IsNoteOn(chord_events[0]) then
@@ -218,21 +203,53 @@ function setChordLetterValues(ms: MidiSequence, number_of_tracks: integer)
                 end_of_file = true
             end
         end
+    end
 
-        showOrHideWidgetGroup(current_group, !has_chord)
+    result = has_chord
+end
+
+function setChordLetterValues(number_of_tracks: integer)
+    var track: integer
+    var has_chord: boolean
+    var efx_chord_flag: boolean = true
+
+    for track = 0; track < number_of_track_buttons; track = track + 1 do
+
+        if track == 0 then
+            current_group = button_A_group
+        elsif track == 1 then
+            current_group = button_B_group
+        elsif track == 2 then
+            current_group = button_C_group
+        elsif track == 3 then
+            current_group = button_D_group
+        end
+
+        has_chord = hasChords(track, number_of_tracks, midi_sequence)
+
+        setGroupState(current_group, has_chord)
 
         if has_chord and (track == 1 or track == 2 or track == 3) then
             efx_chord_flag = false
         end
     end
 
-    if number_of_tracks <= 0 then showOrHideWidgetGroup(button_A_group, true) end
-    if number_of_tracks <= 1 then showOrHideWidgetGroup(button_B_group, true) end
-    if number_of_tracks <= 2 then showOrHideWidgetGroup(button_C_group, true) end
-    if number_of_tracks <= 3 then showOrHideWidgetGroup(button_D_group, true) end
-
     setEfxOrChd(efx_chord_flag)
-    MidiSequence_ResetToStart(ms)
+    MidiSequence_ResetToStart(midi_sequence)
+end
+
+function setPadGroupValues(number_of_active_pads: integer)
+    var pad: integer
+    var has_chord: boolean
+    var efx_chord_flag: boolean = true
+
+    for pad = 0; pad < number_of_pad_buttons; pad = pad + 1 do
+
+        has_chord = hasChords(pad, number_of_active_pads, pad_midi_sequence)
+
+        setPadState(pad, has_chord)
+    end
+    MidiSequence_ResetToStart(midi_sequence)
 end
 
 function setBassName()
@@ -242,11 +259,21 @@ end
 function setTrackButtonOff(track_number: integer)
     if track_number >= 0 then
         if GetWidgetValue(button_letter_array[track_number]) == 1 then
-            press_track_button = false
+            track_button_pressed = false
             SetWidgetValue(button_letter_array[track_number], 0)
         end
         SetWidgetLabel(chord_name_array[track_number], "")
         SetWidgetLabel(next_chord_name_array[track_number], "")
+    end
+end
+
+function setPadOff(pad_number: integer)
+    if pad_number >= 0 then
+        if GetWidgetValue(pad_array[pad_number]) == 1 then
+            pad_pressed = false
+            SetWidgetValue(pad_array[pad_number], 0)
+        end
+        SetWidgetLabel(chord_name_pad_array[pad_number], "")
     end
 end
 
@@ -258,27 +285,12 @@ function setTrackButtonsOff()
     current_chord_number = 0
 end
 
-function removePanelChords()
+function setPadsOff()
     var x: integer
-
-    for x=0; x<Size(panel_chord_array); x=x+1 do
-        SetWidgetLabel(panel_chord_array[x], "")
-        SetWidgetValue(panel_chord_array[x], panel_chord_empty_value)
+    for x=0; x<4; x=x+1 do
+        setPadOff(x)
     end
-end
-
-function drawPanelRows()
-    var x, row: integer
-
-    for x=0; x<Size(panel_chord_row_array); x=x+1 do
-        row = x + 1 + panel_chord_shift
-        SetWidgetLabel(panel_chord_row_array[x], row)
-        if (Size(chord_positions) > 0) and (row < 2 || Size(chord_positions) > panel_chord_columns) then
-            SetWidgetValue(panel_chord_row_array[x], panel_chord_row_on_value)
-        else
-            SetWidgetValue(panel_chord_row_array[x], panel_chord_row_off_value)
-        end
-    end
+    current_pad_chord_number = 0
 end
 
 function stopMidiPlayer()
@@ -286,14 +298,9 @@ function stopMidiPlayer()
     SetWidgetValue(button_D, 0)
 end
 
-function resetPanelChords()
-    removePanelChords()
-    panel_chord_shift = 0
-    drawPanelRows()
-end
-
 function sendChordOffToMidiDevice(chord: MidiMessage Array)
     var index : Integer
+
     for index = 0; index < Size(chord); index = index + 1 do
         UrrejolaPedalboard.SendNow(ReinterpretAsNoteOffMessage(chord[index]))
     end
@@ -302,6 +309,7 @@ end
 
 function sendChordToMidiDevice(chord: MidiMessage Array)
     var index : Integer
+
     for index = 0; index < Size(chord); index = index + 1 do
         UrrejolaPedalboard.SendNow(chord[index])
     end
@@ -310,46 +318,7 @@ function sendChordToMidiDevice(chord: MidiMessage Array)
     end
 end
 
-function drawPanelChords()
-    var x, y: integer
-    var chord: MidiMessage array
-
-    removePanelChords()
-    drawPanelRows()
-    for x=panel_chord_columns*panel_chord_shift; x<Size(chord_positions); x=x+1 do
-        chord = []
-        for y=chord_positions[x]; y<chord_positions[x]+chord_lengths[x]; y=y+1 do
-            chord <-- track_notes[y]
-        end
-        if Size(chord) > 2 and (x - panel_chord_columns*panel_chord_shift) < Size(panel_chord_array) then
-            SetWidgetLabel(panel_chord_array[x - panel_chord_columns*panel_chord_shift], getChordName(chord))
-            SetWidgetValue(panel_chord_array[x - panel_chord_columns*panel_chord_shift], panel_chord_off_value)
-        end
-    end
-end
-
-function setPanelChordOn(chord_number: integer)
-    var x: integer
-    if (Size(chord_positions) > Size(panel_chord_array))
-            and chord_number % panel_chord_columns == 0
-            and chord_number < Size(chord_positions) - panel_chord_columns - 1
-            and chord_number > 0 then
-        panel_chord_shift = panel_chord_shift + 1
-        drawPanelChords()
-    end
-
-    for x=panel_chord_columns*panel_chord_shift; x-panel_chord_columns*panel_chord_shift < Size(panel_chord_array); x=x+1 do
-        if (x == chord_number) then
-            SetWidgetValue(panel_chord_array[x - panel_chord_columns*panel_chord_shift], panel_chord_on_value)
-        elsif x < Size(chord_lengths) then
-            SetWidgetValue(panel_chord_array[x - panel_chord_columns*panel_chord_shift], panel_chord_off_value)
-        else
-            SetWidgetValue(panel_chord_array[x - panel_chord_columns*panel_chord_shift], panel_chord_empty_value)
-        end
-    end
-end
-
-function getTrackNotes(track_number: integer, ms: MidiSequence)
+function getTrackNotes(track_number: integer)
     var chord_events : MidiMessage Array = []
     var end_of_file: boolean = false
     var chord: MidiMessage array
@@ -361,8 +330,8 @@ function getTrackNotes(track_number: integer, ms: MidiSequence)
     chord_lengths = []
     chord_names = []
     while !end_of_file do
-        MidiSequence_CollectEventsNow(ms)
-        chord_events = MidiSequence_GetCurrentEvents(ms, track_number)
+        MidiSequence_CollectEventsNow(midi_sequence)
+        chord_events = MidiSequence_GetCurrentEvents(midi_sequence, track_number)
         chord = []
         for index = 0; index < Size(chord_events); index = index + 1 do
             if IsNoteOn(chord_events[index]) then
@@ -383,7 +352,7 @@ function getTrackNotes(track_number: integer, ms: MidiSequence)
         end
         chord_index = chord_index + 1
     end
-    MidiSequence_ResetToStart(ms)
+    MidiSequence_ResetToStart(midi_sequence)
 end
 
 function getCurrentChord()
@@ -403,26 +372,16 @@ function getCurrentChord()
             getCurrentChord()
         end
     end
-    setPanelChordOn(current_chord_number - 1)
     last_chord = current_chord
 end
 
-function getTrackChords(track_number: integer)
-    getTrackNotes(track_number, midi_sequence)
-end
-
 function playChord(track_number: Integer)
-    if current_chord_number == 0 then
-        drawPanelChords()
-    end
     sendChordOffToMidiDevice(last_chord)
     getCurrentChord()
     sendChordToMidiDevice(current_chord)
 
     if Size(current_chord) == 0 then
         setTrackButtonOff(track_number)
-        //removePanelChords()
-        resetPanelChords()
     end
     if current_chord_number > 0 then
 
@@ -442,12 +401,94 @@ function playChordSequence(track_number: integer)
             setTrackButtonOff(last_track_number)
             last_track_number = track_number
             current_chord_number = 0
-            panel_chord_shift = 0
-            getTrackChords(track_number)
-            drawPanelRows()
+            getTrackNotes(track_number)
         end
         last_variation = current_variation
         playChord(track_number)
+    end
+end
+
+// ====== PAD FUNCTIONS ======
+
+function getCurrentPadChord()
+    var x: integer
+
+    current_pad_chord = []
+    if Size(pad_chord_positions) > current_pad_chord_number then
+        for x=pad_chord_positions[current_pad_chord_number]; x<pad_chord_positions[current_pad_chord_number]+pad_chord_lengths[current_pad_chord_number]; x=x+1 do
+            if GetWidgetValue(chord_root_pad_array[last_pad_number]) == 1 or x > pad_chord_positions[current_pad_chord_number] then
+                current_pad_chord <-- pad_notes[x]
+            end
+        end
+        current_pad_chord_number = current_pad_chord_number + 1
+    else
+        current_pad_chord_number = 0
+        if GetWidgetValue(cycle_pad_array[last_pad_number]) == 1 then
+            getCurrentPadChord()
+        end
+    end
+    last_pad_chord = current_pad_chord
+end
+
+function playPadChord(pad_number: Integer)
+    sendChordOffToMidiDevice(last_pad_chord)
+    getCurrentPadChord()
+    sendChordToMidiDevice(current_pad_chord)
+    if Size(current_pad_chord) == 0 then
+        setPadOff(pad_number)
+    end
+    if current_pad_chord_number > 0 then
+        SetWidgetLabel(chord_name_pad_array[pad_number], pad_chord_names[current_pad_chord_number - 1])
+    end
+end
+
+function getPadNotes(pad_number: integer)
+    var chord_events : MidiMessage Array = []
+    var end_of_file: boolean = false
+    var chord: MidiMessage array
+    var index: integer
+    var chord_index: integer = 0
+
+    pad_notes = []
+    pad_chord_positions = []
+    pad_chord_lengths = []
+    pad_chord_names = []
+    while !end_of_file do
+        MidiSequence_CollectEventsNow(pad_midi_sequence)
+        chord_events = MidiSequence_GetCurrentEvents(pad_midi_sequence, pad_number)
+        chord = []
+        for index = 0; index < Size(chord_events); index = index + 1 do
+            if IsNoteOn(chord_events[index]) then
+                chord <-- chord_events[index]
+            end
+        end
+        if Size(chord) > 0 then
+            pad_chord_positions <-- Size(pad_notes)
+            pad_chord_lengths <-- Size(chord)
+            pad_chord_names <-- getChordName(chord)
+        end
+        for index = 0; index < Size(chord); index = index + 1 do
+            pad_notes <-- chord[index]
+        end
+
+        if Size(chord_events) == 0 then
+            end_of_file = true
+        end
+        chord_index = chord_index + 1
+    end
+    MidiSequence_ResetToStart(pad_midi_sequence)
+end
+
+function playPadChordSequence(pad_number: integer)
+    if pad_number < number_of_pads then
+        if pad_number != last_pad_number Or current_variation != last_variation then
+            setPadOff(last_pad_number)
+            last_pad_number = pad_number
+            current_pad_chord_number = 0
+            getPadNotes(pad_number)
+        end
+        last_variation = current_variation
+        playPadChord(pad_number)
     end
 end
 
@@ -519,8 +560,6 @@ function startMidiPlayer()
         setTrackButtonOff(last_track_number)
         last_track_number = -1
         current_chord_number = 0
-        panel_chord_shift = 0
-        removePanelChords()
         sendChordOffToMidiDevice(last_chord)
     end
 
@@ -532,10 +571,16 @@ end
 function reset()
     sendChordOffToMidiDevice(last_chord)
     setTrackButtonsOff()
-    resetPanelChords()
     last_chord = []
     last_track_number = -1
     stopMidiPlayer()
+end
+
+function resetPads()
+    sendChordOffToMidiDevice(last_pad_chord)
+    setPadsOff()
+    last_pad_chord = []
+    last_pad_number = -1
 end
 
 function setInstrumentFromPedal(newValue: double)
@@ -584,6 +629,17 @@ function isFadeOutReset() returns boolean
     result = is_fade_out
 end
 
+function isPadFadeOutReset() returns boolean
+    var is_fade_out: boolean = false
+
+    if last_pad_number >= 0 then
+        if GetWidgetValue(fade_out_pad_array[last_pad_number]) == 1 then
+            is_fade_out = true
+        end
+    end
+    result = is_fade_out
+end
+
 function chordButtonPressed(track_index: int)
     if GetWidgetValue(foot_pedal) > 0 and track_index == 0 and current_chord_number == 0 and GetWidgetValue(auto_fade_in) == 1 and GetWidgetValue(auto_move) == 0 then
         // prepara fade in
@@ -611,6 +667,13 @@ function chordButtonPressed(track_index: int)
     end
 end
 
+function padPressed(pad_index: int)
+    if isPadFadeOutReset() then
+        ResetWidgetValue(audio_volume_auto)
+    end
+    playPadChordSequence(pad_index)
+end
+
 function startAllProcesses(new_var: int)
     var x: integer
     var tracks: integer array
@@ -625,7 +688,9 @@ function startAllProcesses(new_var: int)
 
     song_name = StringUpToFirstOccurrence(GetVariationName(GetCurrentVariation()), " - ", false, false)
     number_of_tracks = loadMidiFile(song_name)
-    setChordLetterValues(midi_sequence, number_of_tracks)
+    setChordLetterValues(number_of_tracks)
+    number_of_pads   = loadPadMidiFile(song_name)
+    setPadGroupValues(number_of_pads)
     showOrHideMidiFilePlayer()
     new_variation = IntToString(new_var)
     if InSetlistMode() then
@@ -643,8 +708,6 @@ function startAllProcesses(new_var: int)
 
     bass_reverb_saved = false
     chord_player_triggered = -1
-
-    resetPanelChords()
     
     setBassName()
 
@@ -696,6 +759,12 @@ on WidgetValueChanged (newValue : Double) from reset_button
         else
             reset()
         end
+    end
+end
+
+on WidgetValueChanged(newValue: double) from pad_reset
+    if newValue == 1 then
+        resetPads()
     end
 end
 
@@ -790,10 +859,22 @@ on WidgetValueChanged (w: Widget, track_index: Integer, newValue: Double) from b
     if newValue == 1 then
         chordButtonPressed(track_index)
     else
-        if press_track_button then
+        if track_button_pressed then
             SetWidgetValue(button_letter_array[track_index], 1)
         else
-            press_track_button = true
+            track_button_pressed = true
+        end
+    end
+end
+
+on WidgetValueChanged (w: Widget, pad_index: Integer, newValue: Double) from pad_1, pad_2, pad_3, pad_4
+    if newValue == 1 then
+        padPressed(pad_index)
+    else
+        if pad_pressed then
+            SetWidgetValue(pad_array[pad_index], 1)
+        else
+            pad_pressed = true
         end
     end
 end
@@ -829,7 +910,7 @@ on WidgetValueChanged (newValue : Double) from midi_file_playing
         chord_player_index = chord_player_triggered
         chord_player_triggered = -1
         if GetWidgetValue(button_D) == 1 then
-            press_track_button = false
+            track_button_pressed = false
             SetWidgetValue(button_D, 0)
         end
         chordButtonPressed(chord_player_index)

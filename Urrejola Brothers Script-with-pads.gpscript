@@ -5,25 +5,40 @@ var TeensyMidiOut : MidiOutBlock
 var AudioFilePlayer: PluginBlock
 var MidiFilePlayer: PluginBlock
 var OmnisphereInstrument: PluginBlock
-var /*BassGuitarMixer,*/ /*AudioPlayerMixer,*/ MTuner: PluginBlock
-var cycle_1, cycle_2, cycle_3, cycle_4: widget
-var cycle_array: widget array = [cycle_1, cycle_2, cycle_3, cycle_4]
-var chord_root_1, chord_root_2, chord_root_3, chord_root_4: widget
-var chord_root_array: widget array = [chord_root_1, chord_root_2, chord_root_3, chord_root_4]
+var MTuner: PluginBlock
+var GuitarMidi, MIDIGuitarChannel: PluginBlock
 
 var output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6, use_pedal_as_volume: widget
 var output_volume_array: widget array = [output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6]
 
-var button_A, button_B, button_C, button_D: widget
-var button_letter_array: widget array = [button_A, button_B, button_C, button_D]
+// --- CHORD BUTTONS ---
+var button_A, button_B, button_C, button_D, button_E, button_E_state_sender, button_E_sender: widget
+var button_letter_array: widget array = [button_A, button_B, button_C, button_D, button_E]
+var cycle_1, cycle_2, cycle_3, cycle_4, cycle_5: widget
+var cycle_array: widget array = [cycle_1, cycle_2, cycle_3, cycle_4, cycle_5]
+var chord_root_1, chord_root_2, chord_root_3, chord_root_4, chord_root_5: widget
+var chord_root_array: widget array = [chord_root_1, chord_root_2, chord_root_3, chord_root_4, chord_root_5]
+
+var chord_name_1, chord_name_2, chord_name_3, chord_name_4, chord_name_5: widget
+var chord_name_array: widget array = [chord_name_1, chord_name_2, chord_name_3, chord_name_4, chord_name_5]
+var next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4, next_chord_name_5: widget
+var next_chord_name_array: widget array = [next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4, next_chord_name_5]
+
+var fade_out_1, fade_out_2, fade_out_3, fade_out_4, fade_out_5: widget
+var fade_out_array: widget array = [fade_out_1, fade_out_2, fade_out_3, fade_out_4, fade_out_5]
+
+var button_A_group: widget array = [button_A, chord_name_1, next_chord_name_1, chord_root_1, fade_out_1, cycle_1]
+var button_B_group: widget array = [button_B, chord_name_2, next_chord_name_2, chord_root_2, fade_out_2, cycle_2]
+var button_C_group: widget array = [button_C, chord_name_3, next_chord_name_3, chord_root_3, fade_out_3, cycle_3]
+var button_D_group: widget array = [button_D, chord_name_4, next_chord_name_4, chord_root_4, fade_out_4, cycle_4]
+var button_E_group: widget array = [button_E, chord_name_5, next_chord_name_5, chord_root_5, fade_out_5, cycle_5]
+
+var letters: string array = ["A", "B", "C", "D", "E"]
+// --- CHORD BUTTONS end ---
 
 var tuner_button, bass_button, octave_button, guitar_button, /*octave_amount,*/ metronome_button: widget
 
 var next_page_button, previous_page_button, next_song_button, next_page_led, previous_page_led: widget
-
-var /*GuitarGain,*/ /*Guitar,*/ /*GuitarPitch,*/ /*GuitarAmp,*/ /*GuitarDelay,*/ /*GuitarReverb,*/ GuitarMidi, /*GuitarWah,*/ MIDIGuitarChannel: PluginBlock
-//var guitar_plugins_to_bypass: PluginBlock array = [GuitarPitch]
-/*var midi_instrument_velocity, guitar_midi_effect: widget*/
 
 var bass_reverb_button, block_bass_reverb, auto_bass_reverb/*, octave_reverb_button, octave_reverb_amount, octave_reverb_length*/: widget
 
@@ -34,27 +49,14 @@ var midi_file, midi_player_track, midi_player_volume, midi_file_player_label, mi
 var reset_button, stop_button: widget
 var send_setlist: widget
 
-//var /*guitar_delay_button, *//*guitar_amp_button,*/ guitar_reverb_button, guitar_delay_time, guitar_delay_feedback: widget*/
-//var /*guitar_delay_mix,*/ guitar_amp_preset/*, guitar_reverb_button, guitar_reverb_amount, guitar_reverb_length, guitar_midi_button*/: widget
-var guitar_volume/*, guitar_background, guitar_wah_button, guitar_wah_depth*/: widget
+var guitar_volume: widget
 var guitar_with_midi: widget
 
 var foot_pedal, foot_pedal_switch, foot_pedal_filter: widget
 var auto_move, auto_fade_in: widget
 
-var chord_name_1, chord_name_2, chord_name_3, chord_name_4: widget
-var chord_name_array: widget array = [chord_name_1, chord_name_2, chord_name_3, chord_name_4]
-var next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4: widget
-var next_chord_name_array: widget array = [next_chord_name_1, next_chord_name_2, next_chord_name_3, next_chord_name_4]
-
 var start_fade_out, audio_volume_auto: widget
-var fade_out_1, fade_out_2, fade_out_3, fade_out_4: widget
-var fade_out_array: widget array = [fade_out_1, fade_out_2, fade_out_3, fade_out_4]
 
-var button_A_group: widget array = [button_A, chord_name_1, next_chord_name_1, chord_root_1, fade_out_1, cycle_1]
-var button_B_group: widget array = [button_B, chord_name_2, next_chord_name_2, chord_root_2, fade_out_2, cycle_2]
-var button_C_group: widget array = [button_C, chord_name_3, next_chord_name_3, chord_root_3, fade_out_3, cycle_3]
-var button_D_group: widget array = [button_D, chord_name_4, next_chord_name_4, chord_root_4, fade_out_4, cycle_4]
 var current_group: widget array
 var midi_file_player_group: widget array = [midi_player_track, midi_player_volume, midi_file_player_label, midi_file_stop_chords, midi_file_stop_chords_label]
 
@@ -87,7 +89,6 @@ var current_variation, current_setlist : string
 var bass_reverb_saved: Boolean = false
 var filter_off_value: double = 0.6
 var filter_on_value: double = 0.0
-var letters: string array = ["A", "B", "C", "D"]
 var chord_player_triggered: integer = -1
 
 var start_time: double
@@ -155,38 +156,13 @@ function setEfxOrChd(is_efx: boolean)
     end
 end
 
-/*function setChordLetterValues(number_of_tracks: integer)
-    var x: integer
-    var hide_button: boolean
-    
-    for x=0; x<4; x=x+1 do
-        hide_button = true
-        if x < number_of_tracks then
-            hide_button = false
-        end
-        if x == 0 then
-            showOrHideWidgetGroup(button_A_group, hide_button)
-        end
-        if x == 1 then
-            showOrHideWidgetGroup(button_B_group, hide_button)
-            setEfxOrChd(hide_button)
-        end
-        if x == 2 then
-            showOrHideWidgetGroup(button_C_group, hide_button)
-        end
-        if x == 3 then
-            showOrHideWidgetGroup(button_D_group, hide_button)
-        end
-    end
-    showOrHideMidiFilePlayer()
-end*/
-
 function setChordLetterValues(ms: MidiSequence, number_of_tracks: integer)
     var chord_events: MidiMessage Array = []
     var track: integer
     var has_chord: boolean
     var end_of_file: boolean
     var efx_chord_flag: boolean = true
+    var state_sender_value: int
 
     for track = 0; track < number_of_tracks; track = track + 1 do
         MidiSequence_ResetToStart(ms)
@@ -199,6 +175,8 @@ function setChordLetterValues(ms: MidiSequence, number_of_tracks: integer)
             current_group = button_C_group
         elsif track == 3 then
             current_group = button_D_group
+        elsif track == 4 then
+            current_group = button_E_group
         end
 
         has_chord = false
@@ -221,6 +199,14 @@ function setChordLetterValues(ms: MidiSequence, number_of_tracks: integer)
 
         showOrHideWidgetGroup(current_group, !has_chord)
 
+        if track == 4 then
+            state_sender_value = 0
+            if has_chord then
+                state_sender_value = 1
+            end
+            SetWidgetValue(button_E_state_sender, state_sender_value)
+        end
+
         if has_chord and (track == 1 or track == 2 or track == 3) then
             efx_chord_flag = false
         end
@@ -230,6 +216,10 @@ function setChordLetterValues(ms: MidiSequence, number_of_tracks: integer)
     if number_of_tracks <= 1 then showOrHideWidgetGroup(button_B_group, true) end
     if number_of_tracks <= 2 then showOrHideWidgetGroup(button_C_group, true) end
     if number_of_tracks <= 3 then showOrHideWidgetGroup(button_D_group, true) end
+    if number_of_tracks <= 4 then
+        showOrHideWidgetGroup(button_E_group, true)
+        SetWidgetValue(button_E_state_sender, 0)
+    end
 
     setEfxOrChd(efx_chord_flag)
     MidiSequence_ResetToStart(ms)
@@ -252,7 +242,7 @@ end
 
 function setTrackButtonsOff()
     var x: integer
-    for x=0; x<4; x=x+1 do
+    for x=0; x<5; x=x+1 do
         setTrackButtonOff(x)
     end
     current_chord_number = 0
@@ -786,7 +776,10 @@ on WidgetValueChanged (newValue : Double) from metronome_button
     end
 end
 
-on WidgetValueChanged (w: Widget, track_index: Integer, newValue: Double) from button_A, button_B, button_C, button_D
+on WidgetValueChanged (w: Widget, track_index: Integer, newValue: Double) from button_A, button_B, button_C, button_D, button_E
+    if track_index == 4 then
+        SetWidgetValue(button_E_sender, newValue)
+    end
     if newValue == 1 then
         chordButtonPressed(track_index)
     else
