@@ -272,6 +272,7 @@ function setPadOff(pad_number: integer)
         if GetWidgetValue(pad_array[pad_number]) == 1 then
             pad_pressed = false
             SetWidgetValue(pad_array[pad_number], 0)
+            SetWidgetValue(sender_pad_array[pad_number], 0)
         end
         SetWidgetLabel(chord_name_pad_array[pad_number], "")
     end
@@ -436,9 +437,11 @@ function playPadChord(pad_number: Integer)
     sendChordToMidiDevice(current_pad_chord)
     if Size(current_pad_chord) == 0 then
         setPadOff(pad_number)
+        SetWidgetValue(sender_pad_array[pad_number], 0)
     end
     if current_pad_chord_number > 0 then
         SetWidgetLabel(chord_name_pad_array[pad_number], pad_chord_names[current_pad_chord_number - 1])
+        SetWidgetValue(sender_pad_array[pad_number], (1.0 * current_pad_chord_number) / 127)
     end
 end
 
