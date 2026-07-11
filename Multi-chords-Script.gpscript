@@ -6,7 +6,7 @@ var AudioFilePlayer: PluginBlock
 var MidiFilePlayer: PluginBlock
 var OmnisphereInstrument: PluginBlock
 var /*BassGuitarMixer,*/ /*AudioPlayerMixer,*/ MTuner: PluginBlock
-var GainStatus, GainWarwick, GainOctave, GainGuitar: PluginBlock
+var GainStatus, GainWarwick, GainGuitar: PluginBlock
 
 var output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6, use_pedal_as_volume: widget
 var output_volume_array: widget array = [output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6]
@@ -57,19 +57,18 @@ var sender_pad_array: widget array = [sender_pad_1, sender_pad_2, sender_pad_3, 
 var pad_pressed: boolean = true;
 // --- PADS end ---
 
-var tuner_button, bass_button, octave_button, guitar_button, /*octave_amount,*/ metronome_button: widget
+var tuner_button, bass_button, octave_button, guitar_button, metronome_button: widget
 
 var next_page_button, previous_page_button, next_song_button, next_page_led, previous_page_led: widget
 
 var GuitarMidi, MIDIGuitarChannel: PluginBlock
 
-var eq_status, comp_status, eq_warwick, comp_warwick, eq_octaver, comp_octaver, cory_octaver, eq_guitar, comp_guitar, cory_guitar, plugins_on: widget
+var eq_status, comp_status, eq_warwick, comp_warwick, eq_guitar, comp_guitar, cory_guitar, plugins_on: widget
 var status_array: widget array = [eq_status, comp_status]
 var warwick_array: widget array = [eq_warwick, comp_warwick]
-var octaver_array: widget array = [eq_octaver, comp_octaver, cory_octaver]
 var guitar_array: widget array = [eq_guitar, comp_guitar, cory_guitar]
 
-var bass_reverb_button, block_bass_reverb, auto_bass_reverb/*, octave_reverb_button, octave_reverb_amount, octave_reverb_length*/: widget
+var bass_reverb_button, block_bass_reverb, auto_bass_reverb: widget
 
 var select_bass, bass_name: widget
 var bass_name_array: string array = ["Warwick", "Status"]
@@ -98,7 +97,8 @@ var midi_mixer_volume: widget
 
 var chord_state, effect_state: widget
 
-//var out_mode, out_midi_L, out_midi_R, out_bass_L, out_bass_R: widget
+var out_mode_ensayo, out_mode_casa, out_mode_directo: widget
+var midi_left_balance, midi_right_balance, bass_balance, guitar_balance: widget
 
 var knob_audio_track, knob_audio_volume, slider_audio_position, button_audio_switch: widget
 var audio_array: widget array = [knob_audio_track, knob_audio_volume, slider_audio_position]
@@ -117,7 +117,6 @@ var last_chord, last_pad_chord : MidiMessage array = []
 var current_chord_number, current_pad_chord_number: integer = 0
 var last_variation : string = "-1"
 var current_variation, current_setlist : string
-var bass_reverb_saved: Boolean = false
 var filter_off_value: double = 0.6
 var filter_on_value: double = 0.0
 var chord_player_triggered: integer = -1
@@ -133,6 +132,13 @@ var chord_positions, pad_chord_positions: integer array
 var chord_lengths, pad_chord_lengths: integer array
 var chord_names, pad_chord_names: string array
 var current_letter_index: integer
+
+// --- multi-chords --- //
+var chord_channel_mask, pad_chord_channel_mask: integer array
+var current_chord_channel_mask, current_pad_chord_channel_mask: integer
+var chord_sequence_ended, pad_chord_sequence_ended: boolean
+var chord_residual_present, pad_chord_residual_present: boolean
+// -------------------- //
 
 var current_midi_page_array: integer array = [200, 200]
 
@@ -321,14 +327,67 @@ function sendChordOffToMidiDevice(chord: MidiMessage Array)
     sendSysexMessage("chord:0", TeensyMidiOut)
 end
 
-function sendChordToMidiDevice(chord: MidiMessage Array)
-    var index : Integer
+function isChannelInMask(channel: integer, mask: integer) returns boolean
+    result = ((mask >> (channel - 1)) and 1) == 1
+end
 
-    for index = 0; index < Size(chord); index = index + 1 do
-        UrrejolaPedalboard.SendNow(chord[index])
+function getEventChannelMask(events: MidiMessage array) returns integer
+    var i: integer
+    var mask: integer = 0
+    var ch: integer
+    var cc_msg: ControlChangeMessage
+
+    for i = 0; i < Size(events); i = i + 1 do
+        if IsNoteOn(events[i]) then
+            ch = GetChannel(events[i])
+            mask = mask Or (1 << (ch - 1))
+        elsif IsController(events[i]) then
+            cc_msg = ReinterpretAsControllerMessage(events[i])
+            if GetCCNumber(cc_msg) == 20 then
+                ch = GetChannel(events[i])
+                mask = mask Or (1 << (ch - 1))
+            end
+        end
     end
-    if current_chord_number > 0 then
-        sendSysexMessage("chord:" + chord_names[current_chord_number - 1], TeensyMidiOut)
+    result = mask
+end
+
+function updateChordChannels(old_chord: MidiMessage array, new_chord: MidiMessage array, mask: integer, out_chord: MidiMessage array)
+    var index: integer
+    var msg_channel: integer
+    var temp: MidiMessage array = []
+
+    chord_residual_present = false
+
+    if Size(new_chord) == 0 and mask == 0 then
+        sendChordOffToMidiDevice(old_chord)
+        ClearArray(out_chord)
+    else
+        for index = 0; index < Size(old_chord); index = index + 1 do
+            msg_channel = GetChannel(old_chord[index])
+            if isChannelInMask(msg_channel, mask) then
+                UrrejolaPedalboard.SendNow(ReinterpretAsNoteOffMessage(old_chord[index]))
+            else
+                temp <-- old_chord[index]
+                chord_residual_present = true
+            end
+        end
+
+        for index = 0; index < Size(new_chord); index = index + 1 do
+            UrrejolaPedalboard.SendNow(new_chord[index])
+            temp <-- new_chord[index]
+        end
+
+        ClearArray(out_chord)
+        for index = 0; index < Size(temp); index = index + 1 do
+            out_chord <-- temp[index]
+        end
+    end
+end
+
+function sendChordNameSysex(chord_number: integer, names: string array)
+    if chord_number > 0 then
+        sendSysexMessage("chord:" + names[chord_number - 1], TeensyMidiOut)
     end
 end
 
@@ -337,12 +396,14 @@ function getTrackNotes(track_number: integer)
     var end_of_file: boolean = false
     var chord: MidiMessage array
     var index: integer
-    var chord_index: integer = 0
+    var mask: integer
+    var name: string
 
     track_notes = []
     chord_positions = []
     chord_lengths = []
     chord_names = []
+    chord_channel_mask = []
     while !end_of_file do
         MidiSequence_CollectEventsNow(midi_sequence)
         chord_events = MidiSequence_GetCurrentEvents(midi_sequence, track_number)
@@ -352,10 +413,17 @@ function getTrackNotes(track_number: integer)
                 chord <-- chord_events[index]
             end
         end
-        if Size(chord) > 0 then
+        mask = getEventChannelMask(chord_events)
+
+        if Size(chord) > 0 or mask != 0 then
+            name = ""
+            if Size(chord) > 0 then
+                name = getChordName(chord)
+            end
             chord_positions <-- Size(track_notes)
             chord_lengths <-- Size(chord)
-            chord_names <-- getChordName(chord)
+            chord_names <-- name
+            chord_channel_mask <-- mask
         end
         for index = 0; index < Size(chord); index = index + 1 do
             track_notes <-- chord[index]
@@ -364,7 +432,6 @@ function getTrackNotes(track_number: integer)
         if Size(chord_events) == 0 then
             end_of_file = true
         end
-        chord_index = chord_index + 1
     end
     MidiSequence_ResetToStart(midi_sequence)
 end
@@ -374,33 +441,37 @@ function getCurrentChord()
 
     current_chord = []
     if Size(chord_positions) > current_chord_number then
+        current_chord_channel_mask = chord_channel_mask[current_chord_number]
         for x=chord_positions[current_chord_number]; x<chord_positions[current_chord_number]+chord_lengths[current_chord_number]; x=x+1 do
             if GetWidgetValue(chord_root_array[last_track_number]) == 1 or x > chord_positions[current_chord_number] then
                 current_chord <-- track_notes[x]
             end
         end
         current_chord_number = current_chord_number + 1
+        chord_sequence_ended = false
     else
         current_chord_number = 0
+        current_chord_channel_mask = 0
+        chord_sequence_ended = true
         if GetWidgetValue(cycle_array[last_track_number]) == 1 then
             getCurrentChord()
         end
     end
-    last_chord = current_chord
 end
 
 function playChord(track_number: Integer)
-    sendChordOffToMidiDevice(last_chord)
     getCurrentChord()
-    sendChordToMidiDevice(current_chord)
+    updateChordChannels(last_chord, current_chord, current_chord_channel_mask, last_chord)
 
-    if Size(current_chord) == 0 then
+    if !chord_residual_present then
+        sendChordNameSysex(current_chord_number, chord_names)
+    end
+
+    if chord_sequence_ended then
         setTrackButtonOff(track_number)
     end
     if current_chord_number > 0 then
-
         SetWidgetLabel(chord_name_array[track_number], chord_names[current_chord_number - 1])
-
         if Size(chord_names) > current_chord_number then
             SetWidgetLabel(next_chord_name_array[track_number], chord_names[current_chord_number])
         else
@@ -429,26 +500,34 @@ function getCurrentPadChord()
 
     current_pad_chord = []
     if Size(pad_chord_positions) > current_pad_chord_number then
+        current_pad_chord_channel_mask = pad_chord_channel_mask[current_pad_chord_number]
         for x=pad_chord_positions[current_pad_chord_number]; x<pad_chord_positions[current_pad_chord_number]+pad_chord_lengths[current_pad_chord_number]; x=x+1 do
             if GetWidgetValue(chord_root_pad_array[last_pad_number]) == 1 or x > pad_chord_positions[current_pad_chord_number] then
                 current_pad_chord <-- pad_notes[x]
             end
         end
         current_pad_chord_number = current_pad_chord_number + 1
+        pad_chord_sequence_ended = false
     else
         current_pad_chord_number = 0
+        current_pad_chord_channel_mask = 0
+        pad_chord_sequence_ended = true
         if GetWidgetValue(cycle_pad_array[last_pad_number]) == 1 then
             getCurrentPadChord()
         end
     end
-    last_pad_chord = current_pad_chord
 end
 
 function playPadChord(pad_number: Integer)
-    sendChordOffToMidiDevice(last_pad_chord)
     getCurrentPadChord()
-    sendChordToMidiDevice(current_pad_chord)
-    if Size(current_pad_chord) == 0 then
+    updateChordChannels(last_pad_chord, current_pad_chord, current_pad_chord_channel_mask, last_pad_chord)
+    pad_chord_residual_present = chord_residual_present
+
+    if !pad_chord_residual_present then
+        sendChordNameSysex(current_pad_chord_number, pad_chord_names)
+    end
+
+    if pad_chord_sequence_ended then
         setPadOff(pad_number)
         SetWidgetValue(sender_pad_array[pad_number], 0)
     end
@@ -463,12 +542,14 @@ function getPadNotes(pad_number: integer)
     var end_of_file: boolean = false
     var chord: MidiMessage array
     var index: integer
-    var chord_index: integer = 0
+    var mask: integer
+    var name: string
 
     pad_notes = []
     pad_chord_positions = []
     pad_chord_lengths = []
     pad_chord_names = []
+    pad_chord_channel_mask = []
     while !end_of_file do
         MidiSequence_CollectEventsNow(pad_midi_sequence)
         chord_events = MidiSequence_GetCurrentEvents(pad_midi_sequence, pad_number)
@@ -478,10 +559,17 @@ function getPadNotes(pad_number: integer)
                 chord <-- chord_events[index]
             end
         end
-        if Size(chord) > 0 then
+        mask = getEventChannelMask(chord_events)
+
+        if Size(chord) > 0 or mask != 0 then
+            name = ""
+            if Size(chord) > 0 then
+                name = getChordName(chord)
+            end
             pad_chord_positions <-- Size(pad_notes)
             pad_chord_lengths <-- Size(chord)
-            pad_chord_names <-- getChordName(chord)
+            pad_chord_names <-- name
+            pad_chord_channel_mask <-- mask
         end
         for index = 0; index < Size(chord); index = index + 1 do
             pad_notes <-- chord[index]
@@ -490,7 +578,6 @@ function getPadNotes(pad_number: integer)
         if Size(chord_events) == 0 then
             end_of_file = true
         end
-        chord_index = chord_index + 1
     end
     MidiSequence_ResetToStart(pad_midi_sequence)
 end
@@ -542,33 +629,12 @@ function setMidiInstrument(newValue: double)
     end
 end
 
-function switchOctaveOn()
-    if GetWidgetValue(block_bass_reverb) == 0 then
-        if GetWidgetValue(auto_bass_reverb) == 1 And GetWidgetValue(bass_reverb_button) == 1 then
-            bass_reverb_saved = true
-        end
-        SetWidgetValue(bass_reverb_button, 0)
-    end
-end
-
-function switchOctaveOff()
-    if bass_reverb_saved then
-        SetWidgetValue(bass_reverb_button, 1)
-        bass_reverb_saved = false
-    end
-end
-
 function setGuitarOff()
     SetWidgetValue(guitar_button, 0)
 end
 
-function setOctaveOn()
-    SetWidgetValue(octave_button, 1)
-    switchOctaveOn()
-end
-
-function setOctaveOff()
-    SetWidgetValue(octave_button, 0)
+function setGuitarOn()
+    SetWidgetValue(guitar_button, 1)
 end
 
 function startMidiPlayer()
@@ -722,7 +788,6 @@ function startAllProcesses(new_var: int)
     current_variation = new_variation
     //last_track_number = -1
 
-    bass_reverb_saved = false
     chord_player_triggered = -1
     
     setBassName()
@@ -812,33 +877,23 @@ on WidgetValueChanged (newValue: Double) From tuner_button
     end
 end
 
-on WidgetValueChanged (newValue : Double) from bass_button
-    if newValue == 0 then
-        if GetWidgetValue(octave_button) == 1 then
-            //setOctaveOff()
-        end
-    end
-end
-
 on WidgetValueChanged (newValue : Double) from octave_button
     if newValue == 1 then
         SetWidgetValue(bass_button, 1)
-        setGuitarOff()
-        switchOctaveOn()
-    elsif GetWidgetValue(guitar_button) == 0 then
-        switchOctaveOff()
+        SetWidgetValue(guitar_button, 1)
     end
 end
 
 on WidgetValueChanged (newValue : Double) from guitar_button
     if events_allowed then
         if newValue == 1 then
-            setOctaveOff()
             if GetWidgetValue(midi_channel) > 0 and GetWidgetValue(guitar_with_midi) == 1 then
                 switchButtonOn(midi_button)
             end
-            SetWidgetValue(bass_button, 0)
-        elsif GetWidgetValue(octave_button) == 0 then
+            if GetWidgetValue(octave_button) == 0 then
+                SetWidgetValue(bass_button, 0)
+            end
+        else
             SetWidgetValue(bass_button, 1)
             if GetWidgetValue(midi_channel) > 0 and GetWidgetValue(guitar_with_midi) == 1 then
                 switchButtonOff(midi_button)
@@ -1003,16 +1058,6 @@ on ParameterValueChanged(index: integer, value: double) from GainWarwick
     end
 end
 
-on ParameterValueChanged(index: integer, value: double) from GainOctave
-    if index == 1 then
-        if value == 0 then
-            setWidgetGroupValue(octaver_array, 1)
-        else
-            setWidgetGroupValue(octaver_array, 0)
-        end
-    end
-end
-
 on ParameterValueChanged(index: integer, value: double) from GainGuitar
     if index == 1 then
         if value == 0 then
@@ -1025,19 +1070,32 @@ on ParameterValueChanged(index: integer, value: double) from GainGuitar
     end
 end
 
-/*on WidgetValueChanged (newValue: double) from out_mode
+on WidgetValueChanged (newValue: double) from out_mode_ensayo
     if newValue == 1 then
-        switchButtonOn(out_midi_L)
-        switchButtonOn(out_midi_R)
-        switchButtonOff(out_bass_L)
-        switchButtonOff(out_bass_R)
-    else
-        switchButtonOff(out_midi_L)
-        switchButtonOn(out_midi_R)
-        switchButtonOff(out_bass_L)
-        switchButtonOn(out_bass_R)
+        SetWidgetValue(midi_left_balance, 0)
+        SetWidgetValue(midi_right_balance, 0)
+        SetWidgetValue(bass_balance, 0)
+        SetWidgetValue(guitar_balance, 0)
     end
-end*/
+end
+
+on WidgetValueChanged (newValue: double) from out_mode_casa
+    if newValue == 1 then
+        SetWidgetValue(midi_left_balance, 0)
+        SetWidgetValue(midi_right_balance, 1)
+        SetWidgetValue(bass_balance, 0.5)
+        SetWidgetValue(guitar_balance, 0.5)
+    end
+end
+
+on WidgetValueChanged (newValue: double) from out_mode_directo
+    if newValue == 1 then
+        SetWidgetValue(midi_left_balance, 0)
+        SetWidgetValue(midi_right_balance, 1)
+        SetWidgetValue(bass_balance, 0)
+        SetWidgetValue(guitar_balance, 0)
+    end
+end
 
 on TimerTick(ms : double)
     var x: integer

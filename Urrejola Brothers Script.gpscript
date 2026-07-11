@@ -6,7 +6,7 @@ var AudioFilePlayer: PluginBlock
 var MidiFilePlayer: PluginBlock
 var OmnisphereInstrument: PluginBlock
 var /*BassGuitarMixer,*/ /*AudioPlayerMixer,*/ MTuner: PluginBlock
-var GainStatus, GainWarwick, GainOctave, GainGuitar: PluginBlock
+var GainStatus, GainWarwick, GainGuitar: PluginBlock
 
 var output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6, use_pedal_as_volume: widget
 var output_volume_array: widget array = [output_volume_1, output_volume_2, output_volume_3, output_volume_4, output_volume_5, output_volume_6]
@@ -57,19 +57,18 @@ var sender_pad_array: widget array = [sender_pad_1, sender_pad_2, sender_pad_3, 
 var pad_pressed: boolean = true;
 // --- PADS end ---
 
-var tuner_button, bass_button, octave_button, guitar_button, /*octave_amount,*/ metronome_button: widget
+var tuner_button, bass_button, octave_button, guitar_button, metronome_button: widget
 
 var next_page_button, previous_page_button, next_song_button, next_page_led, previous_page_led: widget
 
 var GuitarMidi, MIDIGuitarChannel: PluginBlock
 
-var eq_status, comp_status, eq_warwick, comp_warwick, eq_octaver, comp_octaver, cory_octaver, eq_guitar, comp_guitar, cory_guitar, plugins_on: widget
+var eq_status, comp_status, eq_warwick, comp_warwick, eq_guitar, comp_guitar, cory_guitar, plugins_on: widget
 var status_array: widget array = [eq_status, comp_status]
 var warwick_array: widget array = [eq_warwick, comp_warwick]
-var octaver_array: widget array = [eq_octaver, comp_octaver, cory_octaver]
 var guitar_array: widget array = [eq_guitar, comp_guitar, cory_guitar]
 
-var bass_reverb_button, block_bass_reverb, auto_bass_reverb/*, octave_reverb_button, octave_reverb_amount, octave_reverb_length*/: widget
+var bass_reverb_button, block_bass_reverb, auto_bass_reverb: widget
 
 var select_bass, bass_name: widget
 var bass_name_array: string array = ["Warwick", "Status"]
@@ -117,7 +116,6 @@ var last_chord, last_pad_chord : MidiMessage array = []
 var current_chord_number, current_pad_chord_number: integer = 0
 var last_variation : string = "-1"
 var current_variation, current_setlist : string
-var bass_reverb_saved: Boolean = false
 var filter_off_value: double = 0.6
 var filter_on_value: double = 0.0
 var chord_player_triggered: integer = -1
@@ -542,33 +540,12 @@ function setMidiInstrument(newValue: double)
     end
 end
 
-function switchOctaveOn()
-    if GetWidgetValue(block_bass_reverb) == 0 then
-        if GetWidgetValue(auto_bass_reverb) == 1 And GetWidgetValue(bass_reverb_button) == 1 then
-            bass_reverb_saved = true
-        end
-        SetWidgetValue(bass_reverb_button, 0)
-    end
-end
-
-function switchOctaveOff()
-    if bass_reverb_saved then
-        SetWidgetValue(bass_reverb_button, 1)
-        bass_reverb_saved = false
-    end
-end
-
 function setGuitarOff()
     SetWidgetValue(guitar_button, 0)
 end
 
-function setOctaveOn()
-    SetWidgetValue(octave_button, 1)
-    switchOctaveOn()
-end
-
-function setOctaveOff()
-    SetWidgetValue(octave_button, 0)
+function setGuitarOn()
+    SetWidgetValue(guitar_button, 1)
 end
 
 function startMidiPlayer()
@@ -722,7 +699,6 @@ function startAllProcesses(new_var: int)
     current_variation = new_variation
     //last_track_number = -1
 
-    bass_reverb_saved = false
     chord_player_triggered = -1
     
     setBassName()
@@ -812,33 +788,23 @@ on WidgetValueChanged (newValue: Double) From tuner_button
     end
 end
 
-on WidgetValueChanged (newValue : Double) from bass_button
-    if newValue == 0 then
-        if GetWidgetValue(octave_button) == 1 then
-            //setOctaveOff()
-        end
-    end
-end
-
 on WidgetValueChanged (newValue : Double) from octave_button
     if newValue == 1 then
         SetWidgetValue(bass_button, 1)
-        setGuitarOff()
-        switchOctaveOn()
-    elsif GetWidgetValue(guitar_button) == 0 then
-        switchOctaveOff()
+        SetWidgetValue(guitar_button, 1)
     end
 end
 
 on WidgetValueChanged (newValue : Double) from guitar_button
     if events_allowed then
         if newValue == 1 then
-            setOctaveOff()
             if GetWidgetValue(midi_channel) > 0 and GetWidgetValue(guitar_with_midi) == 1 then
                 switchButtonOn(midi_button)
             end
-            SetWidgetValue(bass_button, 0)
-        elsif GetWidgetValue(octave_button) == 0 then
+            if GetWidgetValue(octave_button) == 0 then
+                SetWidgetValue(bass_button, 0)
+            end
+        else
             SetWidgetValue(bass_button, 1)
             if GetWidgetValue(midi_channel) > 0 and GetWidgetValue(guitar_with_midi) == 1 then
                 switchButtonOff(midi_button)
@@ -999,16 +965,6 @@ on ParameterValueChanged(index: integer, value: double) from GainWarwick
             if GetWidgetValue(plugins_on) == 0 then
                 setWidgetGroupValue(warwick_array, 0)
             end
-        end
-    end
-end
-
-on ParameterValueChanged(index: integer, value: double) from GainOctave
-    if index == 1 then
-        if value == 0 then
-            setWidgetGroupValue(octaver_array, 1)
-        else
-            setWidgetGroupValue(octaver_array, 0)
         end
     end
 end
